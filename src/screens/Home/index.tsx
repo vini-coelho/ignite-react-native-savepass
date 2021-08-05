@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -29,17 +30,32 @@ export function Home() {
   const [data, setData] = useState<LoginListDataProps>([]);
 
   async function loadData() {
-    const dataKey = '@savepass:logins';
-    // Get asyncStorage data, use setSearchListData and setData
+    try {
+      const dataKey = '@savepass:logins';
+      const storedData = await AsyncStorage.getItem(dataKey);
+      if(!storedData) return;
+      const storedDataParsed = JSON.parse(storedData);
+      setData(storedDataParsed);
+      setSearchListData(storedDataParsed);
+    } catch(error) {
+      console.log(error);
+      Alert.alert('Não foi possível carregar os dados.')
+    }
   }
 
   function handleFilterLoginData() {
-    // Filter results inside data, save with setSearchListData
+    const filteredData = data.filter(item => item.service_name.includes(searchText));
+    setSearchListData(filteredData);
   }
 
   function handleChangeInputText(text: string) {
-    // Update searchText value
+    setSearchText(text);
+    if (!searchText.length) setSearchListData(data);
   }
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   useFocusEffect(useCallback(() => {
     loadData();
@@ -67,8 +83,8 @@ export function Home() {
         <Metadata>
           <Title>Suas senhas</Title>
           <TotalPassCount>
-            {searchListData.length
-              ? `${`${searchListData.length}`.padStart(2, '0')} ao total`
+            {searchListData?.length
+              ? `${`${searchListData!.length}`.padStart(2, '0')} ao total`
               : 'Nada a ser exibido'
             }
           </TotalPassCount>
